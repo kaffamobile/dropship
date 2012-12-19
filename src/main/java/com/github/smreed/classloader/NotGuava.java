@@ -15,7 +15,7 @@ final class NotGuava {
     }
   }
 
-  public static RuntimeException propagate(Exception e) {
+  static RuntimeException propagate(Exception e) {
     if (e instanceof RuntimeException) {
       return (RuntimeException) e;
     } else {

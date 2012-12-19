@@ -18,7 +18,7 @@ Until this is put into a maven repo, download source and build a `.jar` with Mav
 Add the following to your `pom.xml`:
 
     <dependency>
-        <groupId>com.bigfatgun</groupId>
+        <groupId>com.github.smreed</groupId>
         <artifactId>maven-classloader</artifactId>
         <version>1.0-SNAPSHOT</version>
     </dependency>
