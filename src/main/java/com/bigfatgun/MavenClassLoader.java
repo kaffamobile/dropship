@@ -1,7 +1,5 @@
 package com.bigfatgun;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -23,98 +21,102 @@ import org.sonatype.aether.util.artifact.DefaultArtifact;
 import org.sonatype.aether.util.graph.PreorderNodeListGenerator;
 
 import java.io.File;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public final class MavenClassLoader {
 
-    public static class ClassLoaderBuilder {
+  public static class ClassLoaderBuilder {
 
-        private static final String COMPILE_SCOPE = "compile";
-        private static final ClassLoader SHARE_NOTHING = null;
+    private static final String COMPILE_SCOPE = "compile";
+    private static final ClassLoader SHARE_NOTHING = null;
 
-        private final ImmutableList<RemoteRepository> repositories;
-        private final File localRepositoryDirectory;
+    private final ImmutableList<RemoteRepository> repositories;
+    private final File localRepositoryDirectory;
 
-        private ClassLoaderBuilder(RemoteRepository... repositories) {
-            Preconditions.checkNotNull(repositories);
-            Preconditions.checkArgument(repositories.length > 0, "Must specify at least one remote repository.");
+    private ClassLoaderBuilder(RemoteRepository... repositories) {
+      checkNotNull(repositories);
+      checkArgument(repositories.length > 0, "Must specify at least one remote repository.");
 
-            this.repositories = ImmutableList.copyOf(repositories);
-            this.localRepositoryDirectory = new File(".m2/repository");
-        }
-
-        public URLClassLoader forGAV(String gav) {
-            try {
-                CollectRequest collectRequest = createCollectRequestForGAV(gav);
-                List<Artifact> artifacts = collectDependenciesIntoArtifacts(collectRequest);
-                List<URL> urls = Lists.newLinkedList();
-                for (Artifact artifact : artifacts) {
-                    urls.add(artifact.getFile().toURI().toURL());
-                }
-
-                return new URLClassLoader(urls.toArray(new URL[urls.size()]), SHARE_NOTHING);
-            } catch (Exception e) {
-                throw Throwables.propagate(e);
-            }
-        }
-
-        private CollectRequest createCollectRequestForGAV(String gav) {
-            Dependency dependency = new Dependency(new DefaultArtifact(gav), COMPILE_SCOPE);
-
-            CollectRequest collectRequest = new CollectRequest();
-            collectRequest.setRoot(dependency);
-            for (RemoteRepository repository : repositories) {
-                collectRequest.addRepository(repository);
-            }
-
-            return collectRequest;
-        }
-
-        private List<Artifact> collectDependenciesIntoArtifacts(CollectRequest collectRequest)
-                throws PlexusContainerException, ComponentLookupException, DependencyCollectionException, ArtifactResolutionException {
-
-            RepositorySystem repositorySystem = newRepositorySystem();
-            RepositorySystemSession session = newSession(repositorySystem);
-            DependencyNode node = repositorySystem.collectDependencies(session, collectRequest).getRoot();
-
-            repositorySystem.resolveDependencies(session, node, null);
-
-            PreorderNodeListGenerator nlg = new PreorderNodeListGenerator();
-            node.accept(nlg);
-
-            return nlg.getArtifacts(false);
-        }
-
-        private RepositorySystem newRepositorySystem() throws PlexusContainerException, ComponentLookupException {
-            return new DefaultPlexusContainer().lookup(RepositorySystem.class);
-        }
-
-        private RepositorySystemSession newSession(RepositorySystem system) {
-            MavenRepositorySystemSession session = new MavenRepositorySystemSession();
-
-            LocalRepository localRepo = new LocalRepository(localRepositoryDirectory);
-            session.setLocalRepositoryManager(system.newLocalRepositoryManager(localRepo));
-
-            return session;
-        }
+      this.repositories = ImmutableList.copyOf(repositories);
+      this.localRepositoryDirectory = new File(".m2/repository");
     }
 
-    /**
-     * Creates a classloader that will resolve artifacts against the default "central" repository. Throws
-     * {@link IllegalArgumentException} if the GAV is invalid, {@link NullPointerException} if the GAV is null.
-     *
-     * @param gav artifact group:artifact:version, i.e. joda-time:joda-time:1.6.2
-     * @return a classloader that can be used to load classes from the given artifact
-     */
-    public static URLClassLoader forGAV(String gav) {
-        return usingCentralRepo().forGAV(Preconditions.checkNotNull(gav));
+    public URLClassLoader forGAV(String gav) {
+      try {
+        CollectRequest collectRequest = createCollectRequestForGAV(gav);
+        List<Artifact> artifacts = collectDependenciesIntoArtifacts(collectRequest);
+        List<URL> urls = Lists.newLinkedList();
+        for (Artifact artifact : artifacts) {
+          urls.add(artifact.getFile().toURI().toURL());
+        }
+
+        return new URLClassLoader(urls.toArray(new URL[urls.size()]), SHARE_NOTHING);
+      } catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
     }
 
-    public static ClassLoaderBuilder usingCentralRepo() {
-        RemoteRepository central = new RemoteRepository("central", "default", "http://repo1.maven.org/maven2/");
-        return new ClassLoaderBuilder(central);
+    private CollectRequest createCollectRequestForGAV(String gav) {
+      Dependency dependency = new Dependency(new DefaultArtifact(gav), COMPILE_SCOPE);
+
+      CollectRequest collectRequest = new CollectRequest();
+      collectRequest.setRoot(dependency);
+      for (RemoteRepository repository : repositories) {
+        collectRequest.addRepository(repository);
+      }
+
+      return collectRequest;
     }
+
+    private List<Artifact> collectDependenciesIntoArtifacts(CollectRequest collectRequest)
+      throws PlexusContainerException, ComponentLookupException, DependencyCollectionException, ArtifactResolutionException {
+
+      RepositorySystem repositorySystem = newRepositorySystem();
+      RepositorySystemSession session = newSession(repositorySystem);
+      DependencyNode node = repositorySystem.collectDependencies(session, collectRequest).getRoot();
+
+      // TODO : deal with deprecation warning on resolveDependencies
+      //noinspection deprecation
+      repositorySystem.resolveDependencies(session, node, null);
+
+      PreorderNodeListGenerator nlg = new PreorderNodeListGenerator();
+      node.accept(nlg);
+
+      return nlg.getArtifacts(false);
+    }
+
+    private RepositorySystem newRepositorySystem() throws PlexusContainerException, ComponentLookupException {
+      return new DefaultPlexusContainer().lookup(RepositorySystem.class);
+    }
+
+    private RepositorySystemSession newSession(RepositorySystem system) {
+      MavenRepositorySystemSession session = new MavenRepositorySystemSession();
+
+      LocalRepository localRepo = new LocalRepository(localRepositoryDirectory);
+      session.setLocalRepositoryManager(system.newLocalRepositoryManager(localRepo));
+
+      return session;
+    }
+  }
+
+  /**
+   * Creates a classloader that will resolve artifacts against the default "central" repository. Throws
+   * {@link IllegalArgumentException} if the GAV is invalid, {@link NullPointerException} if the GAV is null.
+   *
+   * @param gav artifact group:artifact:version, i.e. joda-time:joda-time:1.6.2
+   * @return a classloader that can be used to load classes from the given artifact
+   */
+  public static URLClassLoader forGAV(String gav) {
+    return usingCentralRepo().forGAV(checkNotNull(gav));
+  }
+
+  public static ClassLoaderBuilder usingCentralRepo() {
+    RemoteRepository central = new RemoteRepository("central", "default", "http://repo1.maven.org/maven2/");
+    return new ClassLoaderBuilder(central);
+  }
 }
