@@ -1,6 +1,6 @@
 include Java
 require "../target/maven-classloader-1.0-SNAPSHOT.jar"
-include_class Java::com.bigfatgun.MavenClassLoader
+include_class Java::com.github.smreed.classloader.MavenClassLoader
 
 @cl = MavenClassLoader.forGAV("joda-time:joda-time:1.6.2");
 

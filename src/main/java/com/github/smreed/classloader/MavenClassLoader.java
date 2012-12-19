@@ -1,4 +1,4 @@
-package com.bigfatgun;
+package com.github.smreed.classloader;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;

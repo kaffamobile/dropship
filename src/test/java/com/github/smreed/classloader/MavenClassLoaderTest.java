@@ -1,32 +1,31 @@
-package com.bigfatgun;
+package com.github.smreed.classloader;
 
 import com.google.common.collect.Multiset;
 import org.junit.Test;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import static org.junit.Assert.assertNotNull;
+import static org.fest.assertions.Assertions.assertThat;
 
 public class MavenClassLoaderTest {
 
   @Test
-  public void jodaTime() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+  public void jodaTime() throws Exception {
     String gav = "joda-time:joda-time:[1.6,)";
     String className = "org.joda.time.chrono.BuddhistChronology";
     ClassLoader loader = MavenClassLoader.forGAV(gav);
-    assertNotNull(loader);
+    assertThat(loader).isNotNull();
     Class<?> buddhistChronology = loader.loadClass(className);
-    assertNotNull(buddhistChronology);
+    assertThat(buddhistChronology).isNotNull();
     Method factoryMethod = buddhistChronology.getMethod("getInstance");
-    assertNotNull(factoryMethod.invoke(null));
+    assertThat(factoryMethod.invoke(null)).isNotNull();
   }
 
   @Test(expected = ClassNotFoundException.class)
   public void jodaTimeClassLoaderDoesNotHaveMultiset() throws ClassNotFoundException {
     String gav = "joda-time:joda-time:[1.6,)";
     ClassLoader loader = MavenClassLoader.forGAV(gav);
-    assertNotNull(loader);
+    assertThat(loader).isNotNull();
     loader.loadClass(Multiset.class.getName());
   }
 
