@@ -1,6 +1,5 @@
 package com.github.smreed.classloader;
 
-import com.google.common.collect.Multiset;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
@@ -26,7 +25,7 @@ public class MavenClassLoaderTest {
     String gav = "joda-time:joda-time:[1.6,)";
     ClassLoader loader = MavenClassLoader.forGAV(gav);
     assertThat(loader).isNotNull();
-    loader.loadClass(Multiset.class.getName());
+    loader.loadClass("com.google.common.collect.Multiset");
   }
 
   @Test(expected = IllegalArgumentException.class)

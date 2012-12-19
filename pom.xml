@@ -6,7 +6,7 @@
     <maven>3.0</maven>
   </prerequisites>
   <name>maven-classloader</name>
-  <groupId>com.bigfatgun</groupId>
+  <groupId>com.github.smreed</groupId>
   <artifactId>maven-classloader</artifactId>
   <version>1.0-SNAPSHOT</version>
   <properties>
@@ -15,11 +15,6 @@
     <wagonVersion>2.3</wagonVersion>
   </properties>
   <dependencies>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>14.0-rc1</version>
-    </dependency>
     <dependency>
       <groupId>org.sonatype.aether</groupId>
       <artifactId>aether-api</artifactId>
@@ -189,8 +184,8 @@
     </plugins>
   </build>
   <scm>
-    <connection>scm:git:git@github.com:year2013/maven-classloader.git</connection>
-    <url>scm:git:git@github.com:year2013/maven-classloader.git</url>
-    <developerConnection>scm:git:git@github.com:year2013/maven-classloader.git</developerConnection>
+    <connection>scm:git:git@github.com:smreed/maven-classloader.git</connection>
+    <url>scm:git:git@github.com:smreed/maven-classloader.git</url>
+    <developerConnection>scm:git:git@github.com:smreed/maven-classloader.git</developerConnection>
   </scm>
 </project>
