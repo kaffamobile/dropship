@@ -30,16 +30,21 @@ public class MavenClassLoaderTest {
 
   @Test
   public void useContextClassloader() throws Exception {
-    String gav = "joda-time:joda-time:[1.6,)";
-    String className = "org.joda.time.chrono.BuddhistChronology";
-    ClassLoader loader = MavenClassLoader.forGAV(gav);
-    Thread.currentThread().setContextClassLoader(loader);
-    loader = Thread.currentThread().getContextClassLoader();
-    assertThat(loader).isNotNull();
-    Class<?> buddhistChronology = loader.loadClass(className);
-    assertThat(buddhistChronology).isNotNull();
-    Method factoryMethod = buddhistChronology.getMethod("getInstance");
-    assertThat(factoryMethod.invoke(null)).isNotNull();
+    ClassLoader old = Thread.currentThread().getContextClassLoader();
+    try {
+      String gav = "joda-time:joda-time:[1.6,)";
+      String className = "org.joda.time.chrono.BuddhistChronology";
+      ClassLoader loader = MavenClassLoader.forGAV(gav);
+      Thread.currentThread().setContextClassLoader(loader);
+      loader = Thread.currentThread().getContextClassLoader();
+      assertThat(loader).isNotNull();
+      Class<?> buddhistChronology = loader.loadClass(className);
+      assertThat(buddhistChronology).isNotNull();
+      Method factoryMethod = buddhistChronology.getMethod("getInstance");
+      assertThat(factoryMethod.invoke(null)).isNotNull();
+    } finally {
+      Thread.currentThread().setContextClassLoader(old);
+    }
   }
 
   @Test(expected = IllegalArgumentException.class)
