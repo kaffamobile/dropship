@@ -44,6 +44,8 @@ public final class Bootstrap {
 
     URLClassLoader loader = classLoaderBuilder().forGAV(gav);
 
+    Thread.currentThread().setContextClassLoader(loader);
+
     Class<?> mainClass = loader.loadClass(args[1]);
 
     Method mainMethod = mainClass.getMethod("main", String[].class);
