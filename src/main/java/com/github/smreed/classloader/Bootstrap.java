@@ -1,51 +1,34 @@
 package com.github.smreed.classloader;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
-import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Properties;
 
 import static com.github.smreed.classloader.NotGuava.checkArgument;
 import static com.github.smreed.classloader.NotGuava.checkNotNull;
-import static com.github.smreed.classloader.NotGuava.propagate;
+import static com.github.smreed.classloader.NotLogger.info;
 
-@SuppressWarnings("UseOfSystemOutOrSystemErr")
 public final class Bootstrap {
 
   private static MavenClassLoader.ClassLoaderBuilder classLoaderBuilder() {
-    String override = System.getProperty("maven.repo");
+    String override = Settings.mavenRepoUrl();
     if (override != null) {
+      info("Will load artifacts from %s", override);
       return MavenClassLoader.using(override);
     } else {
       return MavenClassLoader.usingCentralRepo();
     }
   }
 
-  private static Properties loadBootstrapProperties() throws IOException {
-    Properties properties = new Properties();
-    URL url = Bootstrap.class.getClassLoader().getResource("bootstrap.properties");
-    if (url == null) {
-      System.err.println("No bootstrap.properties found! Dynamic artifact version resolution will not work.");
-    } else {
-      properties.load(Bootstrap.class.getClassLoader().getResourceAsStream("bootstrap.properties"));
-    }
-    return properties;
-  }
-
-  private static Properties loadBootstrapPropertiesUnchecked() {
-    try {
-      return loadBootstrapProperties();
-    } catch (Exception e) {
-      throw propagate(e);
-    }
-  }
-
-  private static String resolveGav(String gav, Properties properties) {
+  private static String resolveGav(String gav) {
     if (gav.split(":").length > 2) {
       return gav;
-    } else if (properties.containsKey(gav)) {
-      return gav + ':' + properties.getProperty(gav);
+    }
+
+    Properties settings = Settings.loadBootstrapPropertiesUnchecked();
+
+    if (settings.containsKey(gav)) {
+      return gav + ':' + settings.getProperty(gav);
     } else {
       return gav + ":[0,)";
     }
@@ -55,9 +38,9 @@ public final class Bootstrap {
     args = checkNotNull(args);
     checkArgument(args.length >= 2, "Must specify groupId:artifactId[:version] and classname!");
 
-    String gav = resolveGav(args[0], loadBootstrapPropertiesUnchecked());
+    String gav = resolveGav(args[0]);
 
-    System.out.format("Requested %s, will load artifact and dependencies for %s.%n", args[0], gav);
+    info("Requested %s, will load artifact and dependencies for %s.", args[0], gav);
 
     URLClassLoader loader = classLoaderBuilder().forGAV(gav);
 

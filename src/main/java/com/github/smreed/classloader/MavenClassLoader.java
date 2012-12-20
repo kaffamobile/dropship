@@ -16,9 +16,13 @@ import org.sonatype.aether.graph.DependencyFilter;
 import org.sonatype.aether.graph.DependencyNode;
 import org.sonatype.aether.repository.LocalRepository;
 import org.sonatype.aether.repository.RemoteRepository;
+import org.sonatype.aether.repository.RepositoryPolicy;
 import org.sonatype.aether.resolution.ArtifactResolutionException;
 import org.sonatype.aether.resolution.DependencyRequest;
 import org.sonatype.aether.resolution.DependencyResolutionException;
+import org.sonatype.aether.transfer.AbstractTransferListener;
+import org.sonatype.aether.transfer.TransferCancelledException;
+import org.sonatype.aether.transfer.TransferEvent;
 import org.sonatype.aether.util.artifact.DefaultArtifact;
 import org.sonatype.aether.util.filter.ScopeDependencyFilter;
 import org.sonatype.aether.util.graph.PreorderNodeListGenerator;
@@ -29,17 +33,16 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import static com.github.smreed.classloader.NotGuava.checkArgument;
 import static com.github.smreed.classloader.NotGuava.checkNotNull;
 import static com.github.smreed.classloader.NotGuava.propagate;
+import static com.github.smreed.classloader.NotLogger.info;
 
 public final class MavenClassLoader {
 
-  @SuppressWarnings("UseOfSystemOutOrSystemErr")
   public static class ClassLoaderBuilder {
 
     private static final String COMPILE_SCOPE = "compile";
@@ -52,17 +55,20 @@ public final class MavenClassLoader {
       checkNotNull(repositories);
       checkArgument(repositories.length > 0, "Must specify at least one remote repository.");
 
-      List<RemoteRepository> repositoriesCopy = new ArrayList<RemoteRepository>(repositories.length * 2);
+      List<RemoteRepository> repositoriesCopy = new ArrayList<RemoteRepository>();
       Collections.addAll(repositoriesCopy, repositories);
       this.repositories = Collections.unmodifiableList(repositoriesCopy);
-      this.localRepositoryDirectory = new File(".m2/repository");
+      this.localRepositoryDirectory = new File(Settings.localRepoPath());
     }
 
     public URLClassLoader forGAV(String gav) {
       try {
+        info("Collecting maven metadata.");
         CollectRequest collectRequest = createCollectRequestForGAV(gav);
+        info("Resolving dependencies.");
         List<Artifact> artifacts = collectDependenciesIntoArtifacts(collectRequest);
-        List<URL> urls = new LinkedList<URL>();
+        info("Building classpath for %s from %d URLs.", gav, artifacts.size());
+        List<URL> urls = new ArrayList<URL>();
         for (Artifact artifact : artifacts) {
           urls.add(artifact.getFile().toURI().toURL());
         }
@@ -115,32 +121,47 @@ public final class MavenClassLoader {
 
         private Map<String , Long> startTimes = new HashMap<String, Long>();
 
+        private String artifactAsString(Artifact artifact) {
+          return artifact.getGroupId() + ':' + artifact.getArtifactId() + ':' + artifact.getVersion();
+        }
+
         @Override
         public void artifactDownloading(RepositoryEvent event) {
           super.artifactDownloading(event);
           Artifact artifact = event.getArtifact();
-          startTimes.put(artifact.getGroupId() + ':' + artifact.getArtifactId() + ':' + artifact.getVersion(), System.nanoTime());
-          System.out.format(
-            "Downloading %s:%s:%s...%n",
-            artifact.getGroupId(),
-            artifact.getArtifactId(),
-            artifact.getVersion()
-          );
+          String key = artifactAsString(artifact);
+          startTimes.put(key, System.nanoTime());
         }
 
         @Override
         public void artifactDownloaded(RepositoryEvent event) {
           super.artifactDownloaded(event);
           Artifact artifact = event.getArtifact();
-          System.out.format(
-            "Downloaded %s:%s:%s in %gms.%n",
-            artifact.getGroupId(),
-            artifact.getArtifactId(),
-            artifact.getVersion(),
-            ((double) System.nanoTime() - startTimes.remove(artifact.getGroupId() + ':' + artifact.getArtifactId() + ':' + artifact.getVersion())) / 1000000
-          );
+          String key = artifactAsString(artifact);
+          double downloadTimeNanos = (double) System.nanoTime() - startTimes.remove(key);
+          double downloadTimeMs = downloadTimeNanos / 1E6;
+          double downloadTimeSec = downloadTimeMs / 1E3;
+          long size = artifact.getFile().length();
+          double sizeK = (1 / 1024D) * size;
+          double downloadRateKBytesPerSecond = sizeK / downloadTimeSec;
+          info("Downloaded %s (%d bytes) in %gms (%g kbytes/sec).", key, size, downloadTimeMs, downloadRateKBytesPerSecond);
         }
       });
+
+      session.setChecksumPolicy(RepositoryPolicy.CHECKSUM_POLICY_FAIL);
+
+      session.setTransferListener(new AbstractTransferListener() {
+        @Override
+        public void transferCorrupted(TransferEvent event) throws TransferCancelledException {
+          super.transferCorrupted(event);
+        }
+      });
+
+      session.setIgnoreInvalidArtifactDescriptor(false);
+      session.setIgnoreMissingArtifactDescriptor(false);
+      session.setNotFoundCachingEnabled(false);
+      session.setTransferErrorCachingEnabled(false);
+      session.setUpdatePolicy(RepositoryPolicy.UPDATE_POLICY_ALWAYS);
 
       LocalRepository localRepo = new LocalRepository(localRepositoryDirectory);
       session.setLocalRepositoryManager(system.newLocalRepositoryManager(localRepo));

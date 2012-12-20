@@ -1,0 +1,8 @@
+repo.remote.url = http://example.com/m2
+repo.local.path = /tmp
+
+# Wednesday, December 19 2012
+junit\:junit = 4.10
+
+# Thursday, December 20 2012
+junit\:junit = 4.11
