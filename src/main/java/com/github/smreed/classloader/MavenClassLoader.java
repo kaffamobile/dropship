@@ -73,6 +73,11 @@ public final class MavenClassLoader {
           urls.add(artifact.getFile().toURI().toURL());
         }
 
+        for (String path : Settings.additionalClasspathPaths()) {
+          info("Adding \"%s\" to classpath.", path);
+          urls.add(new File(path).toURI().toURL());
+        }
+
         return new URLClassLoader(urls.toArray(new URL[urls.size()]), SHARE_NOTHING);
       } catch (Exception e) {
         throw propagate(e);

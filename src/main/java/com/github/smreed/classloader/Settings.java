@@ -2,6 +2,9 @@ package com.github.smreed.classloader;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -22,6 +25,15 @@ class Settings {
 
   static String localRepoPath() {
     return loadBootstrapPropertiesUnchecked().getProperty("repo.local.path", ".m2/repository");
+  }
+
+  static List<String> additionalClasspathPaths() {
+    List<String> paths = new LinkedList<String>();
+    String additionalClasspathPathsString = loadBootstrapPropertiesUnchecked().getProperty("bootstrap.additional.paths");
+    if (additionalClasspathPathsString != null) {
+      Collections.addAll(paths, additionalClasspathPathsString.split(","));
+    }
+    return paths;
   }
 
   static synchronized Properties loadBootstrapProperties() throws IOException {
