@@ -1,6 +1,6 @@
 package com.github.smreed.classloader;
 
-import static com.github.smreed.classloader.NotGuava.checkNotNull;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
 class NotLogger {

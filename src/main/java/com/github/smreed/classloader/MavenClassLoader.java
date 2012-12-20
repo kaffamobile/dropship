@@ -1,5 +1,10 @@
 package com.github.smreed.classloader;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.maven.repository.internal.MavenRepositorySystemSession;
 import org.codehaus.plexus.DefaultPlexusContainer;
 import org.codehaus.plexus.PlexusContainerException;
@@ -30,16 +35,14 @@ import org.sonatype.aether.util.graph.PreorderNodeListGenerator;
 import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-import static com.github.smreed.classloader.NotGuava.checkArgument;
-import static com.github.smreed.classloader.NotGuava.checkNotNull;
-import static com.github.smreed.classloader.NotGuava.propagate;
 import static com.github.smreed.classloader.NotLogger.info;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Throwables.propagate;
 
 public final class MavenClassLoader {
 
@@ -55,9 +58,7 @@ public final class MavenClassLoader {
       checkNotNull(repositories);
       checkArgument(repositories.length > 0, "Must specify at least one remote repository.");
 
-      List<RemoteRepository> repositoriesCopy = new ArrayList<RemoteRepository>();
-      Collections.addAll(repositoriesCopy, repositories);
-      this.repositories = Collections.unmodifiableList(repositoriesCopy);
+      this.repositories = ImmutableList.copyOf(repositories);
       this.localRepositoryDirectory = new File(Settings.localRepoPath());
     }
 
@@ -65,10 +66,12 @@ public final class MavenClassLoader {
       try {
         info("Collecting maven metadata.");
         CollectRequest collectRequest = createCollectRequestForGAV(gav);
+
         info("Resolving dependencies.");
         List<Artifact> artifacts = collectDependenciesIntoArtifacts(collectRequest);
+
         info("Building classpath for %s from %d URLs.", gav, artifacts.size());
-        List<URL> urls = new ArrayList<URL>();
+        List<URL> urls = Lists.newArrayListWithExpectedSize(artifacts.size());
         for (Artifact artifact : artifacts) {
           urls.add(artifact.getFile().toURI().toURL());
         }
@@ -78,7 +81,7 @@ public final class MavenClassLoader {
           urls.add(new File(path).toURI().toURL());
         }
 
-        return new URLClassLoader(urls.toArray(new URL[urls.size()]), SHARE_NOTHING);
+        return new URLClassLoader(Iterables.toArray(urls, URL.class), SHARE_NOTHING);
       } catch (Exception e) {
         throw propagate(e);
       }
@@ -124,10 +127,11 @@ public final class MavenClassLoader {
       MavenRepositorySystemSession session = new MavenRepositorySystemSession();
       session.setRepositoryListener(new AbstractRepositoryListener() {
 
-        private Map<String , Long> startTimes = new HashMap<String, Long>();
+        private Map<String , Long> startTimes = Maps.newHashMap();
+        private Joiner gavJoiner = Joiner.on(':');
 
         private String artifactAsString(Artifact artifact) {
-          return artifact.getGroupId() + ':' + artifact.getArtifactId() + ':' + artifact.getVersion();
+          return gavJoiner.join(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion());
         }
 
         @Override
@@ -143,9 +147,9 @@ public final class MavenClassLoader {
           super.artifactDownloaded(event);
           Artifact artifact = event.getArtifact();
           String key = artifactAsString(artifact);
-          double downloadTimeNanos = (double) System.nanoTime() - startTimes.remove(key);
-          double downloadTimeMs = downloadTimeNanos / 1E6;
-          double downloadTimeSec = downloadTimeMs / 1E3;
+          long downloadTimeNanos = System.nanoTime() - startTimes.remove(key);
+          double downloadTimeMs = TimeUnit.NANOSECONDS.toMillis(downloadTimeNanos);
+          double downloadTimeSec = TimeUnit.NANOSECONDS.toSeconds(downloadTimeNanos);
           long size = artifact.getFile().length();
           double sizeK = (1 / 1024D) * size;
           double downloadRateKBytesPerSecond = sizeK / downloadTimeSec;

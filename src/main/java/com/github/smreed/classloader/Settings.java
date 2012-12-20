@@ -1,39 +1,53 @@
 package com.github.smreed.classloader;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
+
 import java.io.IOException;
 import java.net.URL;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static com.github.smreed.classloader.NotGuava.propagate;
 import static com.github.smreed.classloader.NotLogger.debug;
 import static com.github.smreed.classloader.NotLogger.warn;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Throwables.propagate;
 
 class Settings {
 
   private static final String DEFAULT_CONFIG_FILE_NAME = "bootstrap.properties";
   private static final Properties CACHE = new Properties();
+  private static final Splitter CSV = Splitter.on(',').trimResults().omitEmptyStrings();
 
   private static volatile boolean loaded = false;
 
-  static String mavenRepoUrl() {
-    return loadBootstrapPropertiesUnchecked().getProperty("repo.remote.url");
+  static Optional<String> mavenRepoUrl() {
+    return loadProperty("repo.remote.url");
   }
 
   static String localRepoPath() {
-    return loadBootstrapPropertiesUnchecked().getProperty("repo.local.path", ".m2/repository");
+    return loadProperty("repo.local.path", ".m2/repository");
   }
 
   static List<String> additionalClasspathPaths() {
-    List<String> paths = new LinkedList<String>();
-    String additionalClasspathPathsString = loadBootstrapPropertiesUnchecked().getProperty("bootstrap.additional.paths");
-    if (additionalClasspathPathsString != null) {
-      Collections.addAll(paths, additionalClasspathPathsString.split(","));
+    Optional<String> additionalClasspathPathsString = loadProperty("bootstrap.additional.paths");
+    if (additionalClasspathPathsString.isPresent()) {
+      return ImmutableList.copyOf(CSV.split(additionalClasspathPathsString.get()));
+    } else {
+      return ImmutableList.of();
     }
-    return paths;
+  }
+
+  private static String loadProperty(String name, String defaultValue) {
+    checkNotNull(defaultValue);
+
+    return loadProperty(name).or(defaultValue);
+  }
+
+  private static Optional<String> loadProperty(String name) {
+    return Optional.fromNullable(loadBootstrapPropertiesUnchecked().getProperty(name));
   }
 
   static synchronized Properties loadBootstrapProperties() throws IOException {

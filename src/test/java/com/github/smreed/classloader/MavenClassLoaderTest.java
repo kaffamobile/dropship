@@ -1,5 +1,6 @@
 package com.github.smreed.classloader;
 
+import com.google.common.collect.Multiset;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
@@ -22,14 +23,20 @@ public class MavenClassLoaderTest {
 
   @Test(expected = ClassNotFoundException.class)
   public void jodaTimeClassLoaderDoesNotHaveMultiset() throws ClassNotFoundException {
+    // This test verifies that, although we have access to certain classes in THIS classloader in THIS thread,
+    // the classloader loaded by maven GAV does NOT.
     String gav = "joda-time:joda-time:[1.6,)";
     ClassLoader loader = MavenClassLoader.forGAV(gav);
     assertThat(loader).isNotNull();
-    loader.loadClass("com.google.common.collect.Multiset");
+    assertThat(Thread.currentThread().getContextClassLoader().loadClass(Multiset.class.getName())).isNotNull();
+    loader.loadClass(Multiset.class.getName());
   }
 
   @Test
   public void useContextClassloader() throws Exception {
+    // v0.2 and prior did not test context class loader in Bootstrap, which caused problems with
+    // libraries such as hadoop. This test reproduces that behavior and ensures that we can
+    // set the context class loader and then use it to load classes.
     ClassLoader old = Thread.currentThread().getContextClassLoader();
     try {
       String gav = "joda-time:joda-time:[1.6,)";
