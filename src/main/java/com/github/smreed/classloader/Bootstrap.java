@@ -1,9 +1,6 @@
 package com.github.smreed.classloader;
 
-import com.google.common.base.CharMatcher;
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
@@ -17,10 +14,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public final class Bootstrap {
 
-  private static final CharMatcher GAV_DELIMITER = CharMatcher.is(':');
-  private static final Splitter GAV_SPLITTER = Splitter.on(GAV_DELIMITER);
-  private static final Joiner GAV_JOINER = Joiner.on(':');
-
   private static MavenClassLoader.ClassLoaderBuilder classLoaderBuilder() {
     Optional<String> override = Settings.mavenRepoUrl();
     if (override.isPresent()) {
@@ -32,7 +25,7 @@ public final class Bootstrap {
   }
 
   private static String resolveGav(String gav) {
-    ImmutableList<String> tokens = ImmutableList.copyOf(GAV_SPLITTER.split(gav));
+    ImmutableList<String> tokens = ImmutableList.copyOf(Settings.GAV_SPLITTER.split(gav));
 
     checkArgument(tokens.size() > 1, "Require groupId:artifactId[:version]");
     checkArgument(tokens.size() < 4, "Require groupId:artifactId[:version]");
@@ -44,9 +37,9 @@ public final class Bootstrap {
     Properties settings = Settings.loadBootstrapPropertiesUnchecked();
 
     if (settings.containsKey(gav)) {
-      return GAV_JOINER.join(tokens.get(0), tokens.get(1), settings.getProperty(gav));
+      return Settings.GAV_JOINER.join(tokens.get(0), tokens.get(1), settings.getProperty(gav));
     } else {
-      return GAV_JOINER.join(tokens.get(0), tokens.get(1), "[0,)");
+      return Settings.GAV_JOINER.join(tokens.get(0), tokens.get(1), "[0,)");
     }
   }
 

@@ -1,5 +1,7 @@
 package com.github.smreed.classloader;
 
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -16,6 +18,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Throwables.propagate;
 
 class Settings {
+
+  static final Joiner GAV_JOINER = Joiner.on(':');
+  static final boolean DEBUG = System.getProperty("verbose") != null;
+  static final CharMatcher GAV_DELIMITER = CharMatcher.is(':');
+  static final Splitter GAV_SPLITTER = Splitter.on(GAV_DELIMITER).trimResults().omitEmptyStrings();
 
   private static final String DEFAULT_CONFIG_FILE_NAME = "bootstrap.properties";
   private static final Properties CACHE = new Properties();
@@ -62,7 +69,7 @@ class Settings {
       debug("Loading configuration from %s.", url);
       CACHE.load(Bootstrap.class.getClassLoader().getResourceAsStream(DEFAULT_CONFIG_FILE_NAME));
       for (Map.Entry<Object, Object> entry : CACHE.entrySet()) {
-        debug("%s: %s = %s", DEFAULT_CONFIG_FILE_NAME, entry.getKey(), entry.getValue());
+        debug("  %s: %s = %s", DEFAULT_CONFIG_FILE_NAME, entry.getKey(), entry.getValue());
       }
     }
     loaded = true;

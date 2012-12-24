@@ -5,16 +5,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
 class NotLogger {
 
-  private static final boolean DEBUG = System.getProperty("verbose") != null;
-
   static void debug(String format, Object arg, Object... otherArgs) {
-    if (DEBUG) {
+    if (Settings.DEBUG) {
       debug(format(format, arg, otherArgs));
     }
   }
 
   static void debug(String message) {
-    if (DEBUG) {
+    if (Settings.DEBUG) {
       write("DEBUG", message);
     }
   }

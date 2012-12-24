@@ -1,16 +1,12 @@
 package com.github.smreed.classloader;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.maven.repository.internal.MavenRepositorySystemSession;
 import org.codehaus.plexus.DefaultPlexusContainer;
 import org.codehaus.plexus.PlexusContainerException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
-import org.sonatype.aether.AbstractRepositoryListener;
-import org.sonatype.aether.RepositoryEvent;
 import org.sonatype.aether.RepositorySystem;
 import org.sonatype.aether.RepositorySystemSession;
 import org.sonatype.aether.artifact.Artifact;
@@ -25,9 +21,6 @@ import org.sonatype.aether.repository.RepositoryPolicy;
 import org.sonatype.aether.resolution.ArtifactResolutionException;
 import org.sonatype.aether.resolution.DependencyRequest;
 import org.sonatype.aether.resolution.DependencyResolutionException;
-import org.sonatype.aether.transfer.AbstractTransferListener;
-import org.sonatype.aether.transfer.TransferCancelledException;
-import org.sonatype.aether.transfer.TransferEvent;
 import org.sonatype.aether.util.artifact.DefaultArtifact;
 import org.sonatype.aether.util.filter.ScopeDependencyFilter;
 import org.sonatype.aether.util.graph.PreorderNodeListGenerator;
@@ -36,8 +29,6 @@ import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static com.github.smreed.classloader.NotLogger.info;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -125,47 +116,9 @@ public final class MavenClassLoader {
 
     private RepositorySystemSession newSession(RepositorySystem system) {
       MavenRepositorySystemSession session = new MavenRepositorySystemSession();
-      session.setRepositoryListener(new AbstractRepositoryListener() {
-
-        private Map<String , Long> startTimes = Maps.newHashMap();
-        private Joiner gavJoiner = Joiner.on(':');
-
-        private String artifactAsString(Artifact artifact) {
-          return gavJoiner.join(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion());
-        }
-
-        @Override
-        public void artifactDownloading(RepositoryEvent event) {
-          super.artifactDownloading(event);
-          Artifact artifact = event.getArtifact();
-          String key = artifactAsString(artifact);
-          startTimes.put(key, System.nanoTime());
-        }
-
-        @Override
-        public void artifactDownloaded(RepositoryEvent event) {
-          super.artifactDownloaded(event);
-          Artifact artifact = event.getArtifact();
-          String key = artifactAsString(artifact);
-          long downloadTimeNanos = System.nanoTime() - startTimes.remove(key);
-          double downloadTimeMs = TimeUnit.NANOSECONDS.toMillis(downloadTimeNanos);
-          double downloadTimeSec = TimeUnit.NANOSECONDS.toSeconds(downloadTimeNanos);
-          long size = artifact.getFile().length();
-          double sizeK = (1 / 1024D) * size;
-          double downloadRateKBytesPerSecond = sizeK / downloadTimeSec;
-          info("Downloaded %s (%d bytes) in %gms (%g kbytes/sec).", key, size, downloadTimeMs, downloadRateKBytesPerSecond);
-        }
-      });
+      session.setRepositoryListener(new LoggingRepositoryListener());
 
       session.setChecksumPolicy(RepositoryPolicy.CHECKSUM_POLICY_FAIL);
-
-      session.setTransferListener(new AbstractTransferListener() {
-        @Override
-        public void transferCorrupted(TransferEvent event) throws TransferCancelledException {
-          super.transferCorrupted(event);
-        }
-      });
-
       session.setIgnoreInvalidArtifactDescriptor(false);
       session.setIgnoreMissingArtifactDescriptor(false);
       session.setNotFoundCachingEnabled(false);
@@ -177,6 +130,7 @@ public final class MavenClassLoader {
 
       return session;
     }
+
   }
 
   /**
@@ -199,4 +153,5 @@ public final class MavenClassLoader {
     RemoteRepository central = new RemoteRepository("central", "default", "http://repo1.maven.org/maven2/");
     return new ClassLoaderBuilder(central);
   }
+
 }
