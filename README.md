@@ -31,3 +31,29 @@ You're done! Assuming you wanted the classloader for a reason, such as loading a
 
     Class<?> junitAssertClass = classLoader.loadClass("org.junit.Assert");
 
+Bootstrap Your Application
+----
+
+Stop pushing artifacts into production, use Bootstrap to pull them down from a maven repository and run your code!
+Bootstrap automatically creates a classpath containing all of your project's dependencies and will run the `public static
+void main(String[])` method of a class you specify!
+
+    java -cp maven-classloader-1.0-SNAPSHOT.jar mygroup:myartifact[:myversion] mygroup.myartifact.Main arg1 arg2...
+
+If you omit the version, Bootstrap will automatically run the latest version of your artifact.
+
+If you need to manage versions of multiple artifacts, then use `bootstrap.properties` to map them.
+
+    #bootstrap.properties
+    repo.remote.url = http://some-other-repo/
+    repo.local.path = /tmp
+    
+    bootstrap.additional.paths = /tmp/resources
+    
+    # You can leave older entries, they will be ignored and you can use this as a deploy log
+    # 2012-12-23
+    mygroup.myartifact = 1.0
+    
+    # 2012-12-24
+    mygroup.myartifact = 1.1
+
