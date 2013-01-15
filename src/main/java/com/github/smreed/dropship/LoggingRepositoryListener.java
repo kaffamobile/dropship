@@ -1,4 +1,4 @@
-package com.github.smreed.classloader;
+package com.github.smreed.dropship;
 
 import com.google.common.collect.Maps;
 import org.sonatype.aether.AbstractRepositoryListener;
@@ -8,8 +8,8 @@ import org.sonatype.aether.artifact.Artifact;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.github.smreed.classloader.NotLogger.debug;
-import static com.github.smreed.classloader.NotLogger.info;
+import static com.github.smreed.dropship.NotLogger.debug;
+import static com.github.smreed.dropship.NotLogger.info;
 
 class LoggingRepositoryListener extends AbstractRepositoryListener {
 

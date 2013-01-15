@@ -1,4 +1,4 @@
-package com.github.smreed.classloader;
+package com.github.smreed.dropship;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -34,7 +34,7 @@ class NotLogger {
   }
 
   private static void write(String level, String line) {
-    System.out.println("[Bootstrap " + level + "] " + line);
+    System.out.format("[Dropship %s] %s%n", level, line);
   }
 
   private static String format(String format, Object arg, Object... otherArgs) {

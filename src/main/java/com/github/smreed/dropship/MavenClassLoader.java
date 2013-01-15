@@ -1,4 +1,4 @@
-package com.github.smreed.classloader;
+package com.github.smreed.dropship;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -30,7 +30,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
 
-import static com.github.smreed.classloader.NotLogger.info;
+import static com.github.smreed.dropship.NotLogger.info;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Throwables.propagate;
@@ -53,15 +53,15 @@ public final class MavenClassLoader {
       this.localRepositoryDirectory = new File(Settings.localRepoPath());
     }
 
-    public URLClassLoader forGAV(String gav) {
+    public URLClassLoader forMavenCoordinates(String groupArtifactVersion) {
       try {
         info("Collecting maven metadata.");
-        CollectRequest collectRequest = createCollectRequestForGAV(gav);
+        CollectRequest collectRequest = createCollectRequestForGAV(groupArtifactVersion);
 
         info("Resolving dependencies.");
         List<Artifact> artifacts = collectDependenciesIntoArtifacts(collectRequest);
 
-        info("Building classpath for %s from %d URLs.", gav, artifacts.size());
+        info("Building classpath for %s from %d URLs.", groupArtifactVersion, artifacts.size());
         List<URL> urls = Lists.newArrayListWithExpectedSize(artifacts.size());
         for (Artifact artifact : artifacts) {
           urls.add(artifact.getFile().toURI().toURL());
@@ -116,8 +116,8 @@ public final class MavenClassLoader {
 
     private RepositorySystemSession newSession(RepositorySystem system) {
       MavenRepositorySystemSession session = new MavenRepositorySystemSession();
-      session.setRepositoryListener(new LoggingRepositoryListener());
 
+      session.setRepositoryListener(new LoggingRepositoryListener());
       session.setChecksumPolicy(RepositoryPolicy.CHECKSUM_POLICY_FAIL);
       session.setIgnoreInvalidArtifactDescriptor(false);
       session.setIgnoreMissingArtifactDescriptor(false);
@@ -140,8 +140,8 @@ public final class MavenClassLoader {
    * @param gav artifact group:artifact:version, i.e. joda-time:joda-time:1.6.2
    * @return a classloader that can be used to load classes from the given artifact
    */
-  public static URLClassLoader forGAV(String gav) {
-    return usingCentralRepo().forGAV(checkNotNull(gav));
+  public static URLClassLoader forMavenCoordinates(String gav) {
+    return usingCentralRepo().forMavenCoordinates(checkNotNull(gav));
   }
 
   public static ClassLoaderBuilder using(String url) {

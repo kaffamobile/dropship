@@ -2,4 +2,4 @@
 target
 *.iml
 .idea
-bootstrap.properties
+dropship.properties

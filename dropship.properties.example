@@ -2,7 +2,7 @@
 repo.local.path = /tmp
 
 # Additional paths to add to the classpath (at end)
-bootstrap.additional.paths = .
+dropship.additional.paths = .
 
 # Wednesday, December 19 2012
 junit\:junit = 4.10

@@ -1,4 +1,4 @@
-package com.github.smreed.classloader;
+package com.github.smreed.dropship;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -8,11 +8,11 @@ import java.lang.reflect.Method;
 import java.net.URLClassLoader;
 import java.util.Properties;
 
-import static com.github.smreed.classloader.NotLogger.info;
+import static com.github.smreed.dropship.NotLogger.info;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public final class Bootstrap {
+public final class Dropship {
 
   private static MavenClassLoader.ClassLoaderBuilder classLoaderBuilder() {
     Optional<String> override = Settings.mavenRepoUrl();
@@ -47,11 +47,15 @@ public final class Bootstrap {
     args = checkNotNull(args);
     checkArgument(args.length >= 2, "Must specify groupId:artifactId[:version] and classname!");
 
+    info("Starting Dropship v%s", Settings.dropshipVersion());
+
     String gav = resolveGav(args[0]);
 
     info("Requested %s, will load artifact and dependencies for %s.", args[0], gav);
 
-    URLClassLoader loader = classLoaderBuilder().forGAV(gav);
+    URLClassLoader loader = classLoaderBuilder().forMavenCoordinates(gav);
+
+    System.setProperty("dropship.running", "true");
 
     Class<?> mainClass = loader.loadClass(args[1]);
 
