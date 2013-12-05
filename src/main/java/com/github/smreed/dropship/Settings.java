@@ -72,7 +72,15 @@ class Settings {
 
     URL url = Dropship.class.getClassLoader().getResource(DEFAULT_CONFIG_FILE_NAME);
     if (url == null) {
-      warn("No dropship.properties found! Dynamic artifact version resolution will not work.");
+      warn("No dropship.properties found! Using .dropship-prefixed system properties (-D)");
+      for(Object key: System.getProperties().keySet()) {
+    	  String skey = String.valueOf(key);
+    	  if(skey.startsWith("dropship.")) {
+    		  String kkey = skey.substring("dropship.".length());
+    		  warn("Using " + kkey + "=" + System.getProperty(skey));
+    		  CACHE.put(kkey, System.getProperty(skey));
+    	  }
+      }
     } else {
       debug("Loading configuration from %s.", url);
       CACHE.load(Dropship.class.getClassLoader().getResourceAsStream(DEFAULT_CONFIG_FILE_NAME));
